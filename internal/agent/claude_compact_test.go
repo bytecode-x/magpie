@@ -43,8 +43,6 @@ func TestClaudeCompactWindow(t *testing.T) {
 	if compact() != "512000" {
 		t.Fatalf("on magpie: %q", compact())
 	}
-	// An older magpie wrote and stashed 272K. Sync updates its own value,
-	// rather than mistaking it for a user-owned threshold.
 	must(edit.SetJSON(path, edit.KV{Path: "env." + claudeCompactEnv, Value: "272000"}))
 	stash(map[string]string{"claude.compact_window": "272000"})
 	must(a.Sync())

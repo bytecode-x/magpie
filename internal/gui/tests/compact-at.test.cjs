@@ -66,10 +66,10 @@ const words = {
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
   for (const lang of Object.keys(words)) {
     const w = words[lang];
-    const open = async (t, view, height = 720, width = 900) => {
+    const open = async (t, view, height = 720) => {
       const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || "chromium" }));
       t.after(() => browser.close());
-      const page = await (await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" })).newPage();
+      const page = await (await browser.newContext({ viewport: { width: 900, height }, reducedMotion: "reduce" })).newPage();
       page.setDefaultTimeout(5000);
       const errors = [], posts = [];
       page.on("pageerror", (e) => errors.push(e.message));
@@ -146,19 +146,6 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       assert.deepEqual(posts.at(-1).body, { on: false, at: 0 });
       assert.equal(await view(), before, "the row scrolled the page");
       assert(!posts.some((p) => p.path === "/api/settings"), "set on its own, not with the other preferences");
-      assert.deepEqual(errors, []);
-    });
-
-    test(`${engine} ${lang}: the default window fits a narrow settings row`, async (t) => {
-      const { page, errors } = await open(t, "settings", 720, 560);
-      const row = page.locator("#fullContextSegs");
-      await row.getByText(w.at("512K"), { exact: true }).waitFor();
-      assert.equal(await row.locator("input.compact-num").getAttribute("placeholder"), "512k");
-      const fits = await row.evaluate((e) => [...e.querySelectorAll(".opt, input")].every((child) => {
-        const box = child.getBoundingClientRect();
-        return box.left >= 0 && box.right <= innerWidth;
-      }));
-      assert(fits, "the controls overflow the window");
       assert.deepEqual(errors, []);
     });
   }

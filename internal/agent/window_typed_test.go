@@ -13,7 +13,7 @@ import (
 // A window the user typed is the one Codex and Claude Code run to (#1809,
 // a DeepSeek V4.1 Flash group set to 500K): a routing group's own size, or
 // one set on the provider for a model, isn't cut to magpie's default
-// working window. Codex is told
+// working window (272K, which Codex ran to 95% of: ~258K). Codex is told
 // it as its context_window, on disk and in the gateway's list, with no
 // max_context_window; Claude Code is handed no CLAUDE_CODE_AUTO_COMPACT_
 // WINDOW, so it runs to the CLAUDE_CODE_MAX_CONTEXT_TOKENS it is told. A
@@ -78,8 +78,8 @@ func TestTypedWindowReachesCodexAndClaudeCode(t *testing.T) {
 		}
 	}
 	expect("typed windows", map[string]window{
-		"group/flash": {600000, 0},       // the group's own size, above the default
-		"ds/pro":      {700000, 0},       // the provider's for the model, above the default
+		"group/flash": {600000, 0},       // the group's own size
+		"ds/pro":      {700000, 0},       // the provider's for the model
 		"ds/flash":    {512000, 1000000}, // nobody typed it: the default
 	}, map[string]int{"group/flash": 600000, "ds/pro": 700000, "ds/flash": 0})
 

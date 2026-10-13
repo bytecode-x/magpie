@@ -36,30 +36,12 @@ something else shows up as drift.
 
 ## Conversation windows
 
-With no compaction threshold set, magpie tells Codex's generated model
-entries a working window of at most 512,000 tokens, without enlarging a
-smaller model's window. A capped entry keeps its full window in
-`max_context_window`.
-Claude Code uses the same default for non-Claude models and mixed routing
-groups; Claude models and all-Claude groups keep their own window.
-This is magpie's policy, not a claim about every Codex model's default:
-native ChatGPT entries keep their resolved provider window.
-
-A model's or provider's threshold comes before Settings' `compactAt`;
-`fullContext` removes the global cap. User-typed model windows and
-agent-owned compaction settings keep their existing precedence. See
-[`settings.Compact`](../../internal/settings/settings.go),
-[`provider.CompactFor`](../../internal/provider/compact.go),
-[`codexcat.Entries`](../../internal/codexcat/codexcat.go) and
-[`claudeCompactEnv`](../../internal/agent/claude.go).
-[`CodexListTag`](../../internal/provider/codex_models.go) includes the
-effective global threshold, including the default, so a changed default
-invalidates Codex's cached list.
-
-An absent or zero `compactAt` follows the default. An explicit positive
-value remains unchanged. Earlier versions normalized a typed 272K to zero,
-so those saved settings follow the new default too; selecting 272K now
-stores it as an explicit threshold.
+The default working window is 512,000 tokens ([`Settings.Compact`](../../internal/settings/settings.go))
+for Codex's generated entries and Claude Code's non-Claude models or mixed groups.
+Smaller model windows, explicit thresholds, Full window and native-model exemptions keep their existing behavior.
+An absent or zero `compactAt` follows the default, including older settings that normalized a typed 272K to zero;
+positive stored values remain unchanged.
+[`CodexListTag`](../../internal/provider/codex_models.go) includes the default threshold so an upgrade invalidates cached lists.
 
 ## Constraints and failure behavior
 

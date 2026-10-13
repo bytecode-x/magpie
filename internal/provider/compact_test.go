@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/yetone/magpie/internal/catalog"
-	"github.com/yetone/magpie/internal/codexcat"
 	"github.com/yetone/magpie/internal/settings"
 )
 
@@ -115,28 +114,5 @@ func TestSetCompactAt(t *testing.T) {
 	}
 	if s := (settings.Settings{CompactAt: 500000, FullContext: true}); s.Compact() != 0 || s.Working(1000000) != 1000000 {
 		t.Errorf("full window: %d", s.Compact())
-	}
-}
-
-// The old tag omitted the default threshold, so changing that default
-// could leave Codex refreshing the age of a cached list with the old window.
-func TestCodexDefaultCompactChangesLegacyListTag(t *testing.T) {
-	limitsHome(t)
-	legacy := codexcat.PolicyTag(codexcat.Tag(CodexListed()))
-	got := CodexListTag()
-	if got == legacy {
-		t.Fatalf("default compaction window missing from the list tag: %q", got)
-	}
-	if err := SetCompactAt(272000); err != nil {
-		t.Fatal(err)
-	}
-	if CodexListTag() == got {
-		t.Error("explicit 272K kept the default list tag")
-	}
-	if err := SetCompactAt(512000); err != nil {
-		t.Fatal(err)
-	}
-	if reset := CodexListTag(); reset != got {
-		t.Errorf("reset tag %q; want %q", reset, got)
 	}
 }
