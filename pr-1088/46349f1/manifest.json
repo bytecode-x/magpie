@@ -1,0 +1,29 @@
+{
+  "summary": "在 Agent 页接入 OpenClaw：未安装时它出现在「安装其他 Agent」列表中，带官方彩色图标和 shell/npm 安装命令；已安装或已配置时，接入面板会多出「配置模型」，可编辑主模型与按顺序的降级模型（添加、上移、移除），并把字段标签改为「主模型」。",
+  "scenes": [
+    {
+      "title": "OpenClaw 的安装入口",
+      "shots": [
+        {
+          "file": "01-install-section-collapsed.png",
+          "caption": "未安装 OpenClaw 时，Agent 页底部的「安装其他 Agent」",
+          "width": 2168
+        },
+        {
+          "file": "02-openclaw-install-commands.png",
+          "caption": "展开后列表中的 OpenClaw、它的彩色图标与各平台安装命令",
+          "width": 2168
+        }
+      ]
+    }
+  ],
+  "video": "preview.mp4",
+  "poster": "poster.png",
+  "errors": [],
+  "leak": false,
+  "skipped": null,
+  "mismatch": "",
+  "unseen": "沙盒里没有安装或配置 OpenClaw（没有 openclaw CLI 也没有 .openclaw 目录），所以看不到 OpenClaw 的 Agent 行、它的接入开关与「配置模型」里的主模型/降级模型编辑控件（添加降级模型、上移、移除、只读与 $include 错误文案），也看不到接入后提示在 /model 中选择模型的文字；这些只在已安装或已配置 OpenClaw 时才渲染。这里只显示未安装时的安装入口。",
+  "interactive": true,
+  "pages": 1
+}
