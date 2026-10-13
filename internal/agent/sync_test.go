@@ -276,7 +276,15 @@ func TestSyncCatalogAgesCodexCache(t *testing.T) {
 		t.Errorf("stale cache: %+v", c)
 	}
 
-	fresh := `{"fetched_at":"2026-09-25T10:00:00Z","etag":` + string(must(json.Marshal(codexcat.WithTag(`W/"v1"`, codexcat.Tag(provider.CodexListed()))))) + `,"models":[]}`
+	legacy := `{"fetched_at":"2026-09-25T10:00:00Z","etag":` + string(must(json.Marshal(codexcat.WithTag(`W/"v1"`, codexcat.Tag(provider.CodexListed()))))) + `,"models":[]}`
+	writeFile(t, cache, legacy)
+	SyncCatalog()
+	json.Unmarshal([]byte(readFile(cache)), &c)
+	if c.At != "1970-01-01T00:00:00Z" {
+		t.Errorf("cache without the default threshold wasn't aged: %+v", c)
+	}
+
+	fresh := `{"fetched_at":"2026-09-25T10:00:00Z","etag":` + string(must(json.Marshal(codexcat.WithTag(`W/"v1"`, provider.CodexListTag())))) + `,"models":[]}`
 	writeFile(t, cache, fresh)
 	SyncCatalog()
 	if got := readFile(cache); got != fresh {

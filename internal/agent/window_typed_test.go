@@ -13,7 +13,7 @@ import (
 // A window the user typed is the one Codex and Claude Code run to (#1809,
 // a DeepSeek V4.1 Flash group set to 500K): a routing group's own size, or
 // one set on the provider for a model, isn't cut to magpie's default
-// working window (272K, which Codex ran to 95% of: ~258K). Codex is told
+// working window. Codex is told
 // it as its context_window, on disk and in the gateway's list, with no
 // max_context_window; Claude Code is handed no CLAUDE_CODE_AUTO_COMPACT_
 // WINDOW, so it runs to the CLAUDE_CODE_MAX_CONTEXT_TOKENS it is told. A
@@ -30,9 +30,9 @@ func TestTypedWindowReachesCodexAndClaudeCode(t *testing.T) {
 		}
 	}
 	must(provider.Save(provider.Provider{ID: "ds", Name: "DS", Key: "k", Chat: "http://127.0.0.1:1/v1",
-		Models: []string{"flash", "pro"}, Contexts: map[string]int{"pro": 400000}}))
+		Models: []string{"flash", "pro"}, Contexts: map[string]int{"pro": 700000}}))
 	must(catalog.SaveLive("ds", "http://127.0.0.1:1/v1", []catalog.Model{{ID: "flash", Context: 1000000}, {ID: "pro", Context: 1000000}}))
-	must(provider.SaveGroup(provider.Group{ID: "flash", Name: "Flash", Members: []string{"ds/flash"}, Context: 500000}))
+	must(provider.SaveGroup(provider.Group{ID: "flash", Name: "Flash", Members: []string{"ds/flash"}, Context: 600000}))
 
 	must(codex(home).Fields[0].Set("group/flash"))
 	type window struct{ context, max int }
@@ -78,34 +78,34 @@ func TestTypedWindowReachesCodexAndClaudeCode(t *testing.T) {
 		}
 	}
 	expect("typed windows", map[string]window{
-		"group/flash": {500000, 0},       // the group's own size
-		"ds/pro":      {400000, 0},       // the provider's for the model
-		"ds/flash":    {272000, 1000000}, // nobody typed it: the default
-	}, map[string]int{"group/flash": 500000, "ds/pro": 400000, "ds/flash": 0})
+		"group/flash": {600000, 0},       // the group's own size, above the default
+		"ds/pro":      {700000, 0},       // the provider's for the model, above the default
+		"ds/flash":    {512000, 1000000}, // nobody typed it: the default
+	}, map[string]int{"group/flash": 600000, "ds/pro": 700000, "ds/flash": 0})
 
 	path := filepath.Join(home, ".claude", "settings.json")
 	writeFile(t, path, `{}`)
 	a := claude(home)
 	env := func(k string) string { v, _ := edit.GetJSON(path, "env."+k); return v }
 	must(a.Field("model").Set("group/flash"))
-	if c, w := env(claudeCompactEnv), env(claudeContextEnv); c != "" || w != "500000" {
-		t.Errorf("Claude Code on the group: compact %q, window %q; want none and 500000", c, w)
+	if c, w := env(claudeCompactEnv), env(claudeContextEnv); c != "" || w != "600000" {
+		t.Errorf("Claude Code on the group: compact %q, window %q; want none and 600000", c, w)
 	}
 	must(a.Field("model").Set("ds/pro"))
-	if c, w := env(claudeCompactEnv), env(claudeContextEnv); c != "" || w != "400000" {
-		t.Errorf("Claude Code on ds/pro: compact %q, window %q; want none and 400000", c, w)
+	if c, w := env(claudeCompactEnv), env(claudeContextEnv); c != "" || w != "700000" {
+		t.Errorf("Claude Code on ds/pro: compact %q, window %q; want none and 700000", c, w)
 	}
 	must(a.Field("model").Set("ds/flash"))
-	if c := env(claudeCompactEnv); c != "272000" {
-		t.Errorf("Claude Code on ds/flash: compact %q; want the default 272000", c)
+	if c := env(claudeCompactEnv); c != "512000" {
+		t.Errorf("Claude Code on ds/flash: compact %q; want the default 512000", c)
 	}
 
 	// a size the user typed in Settings comes first
 	must(provider.SetCompactAt(300000))
 	SyncCatalog()
 	expect("Compact at 300K", map[string]window{
-		"group/flash": {300000, 500000},
-		"ds/pro":      {300000, 400000},
+		"group/flash": {300000, 600000},
+		"ds/pro":      {300000, 700000},
 	}, map[string]int{"group/flash": 0, "ds/pro": 0})
 	must(a.Field("model").Set("group/flash"))
 	if c := env(claudeCompactEnv); c != "300000" {

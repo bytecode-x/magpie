@@ -27,6 +27,9 @@ func TestCodexCatalogCompactAt(t *testing.T) {
 			{ID: "d/pro", Name: "pro", Context: 1000000, Compact: 2000000},
 			{ID: "x/big", Name: "big", Context: 1000000},
 			{ID: "x/small", Name: "small", Context: 128000},
+			{ID: "x/medium", Name: "medium", Context: 400000},
+			{ID: "x/boundary", Name: "boundary", Context: 512000},
+			{ID: "x/above", Name: "above", Context: 512001},
 		}), &got)
 		out := map[string][2]any{}
 		for _, e := range got.Models {
@@ -44,10 +47,13 @@ func TestCodexCatalogCompactAt(t *testing.T) {
 		}
 	}
 	check("default", map[string][2]any{
-		"d/flash": {float64(500000), float64(1000000)},
-		"d/pro":   {float64(1000000), nil},
-		"x/big":   {float64(settings.WorkingWindow), float64(1000000)},
-		"x/small": {float64(128000), nil},
+		"d/flash":    {float64(500000), float64(1000000)},
+		"d/pro":      {float64(1000000), nil},
+		"x/big":      {float64(512000), float64(1000000)},
+		"x/small":    {float64(128000), nil},
+		"x/medium":   {float64(400000), nil},
+		"x/boundary": {float64(512000), nil},
+		"x/above":    {float64(512000), float64(512001)},
 	})
 	if err := settings.Save(settings.Settings{CompactAt: 400000}); err != nil {
 		t.Fatal(err)

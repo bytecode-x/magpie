@@ -7,7 +7,7 @@
 // anything is sent. Settings → Long conversations takes a size of its own
 // beside Compact at / Full window; a typed size posts settings/full-context
 // with it, and no click or typing scrolls the page.
-// English and Chinese, Chromium and WebKit; no backend, the API is faked here.
+// All five languages, Chromium and WebKit; no backend, the API is faked here.
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -36,7 +36,7 @@ function serve(lang, posts) {
     if (url.pathname === "/api/settings/full-context") {
       const body = req.postDataJSON();
       posts.push({ path: url.pathname, body });
-      settings = { ...settings, fullContext: body.on, ...(body.at !== undefined ? { compactAt: body.at === 272000 ? 0 : body.at } : {}) };
+      settings = { ...settings, fullContext: body.on, ...(body.at !== undefined ? { compactAt: body.at === 512000 ? 0 : body.at } : {}) };
       return json(settings);
     }
     if (url.pathname === "/api/settings") {
@@ -58,15 +58,18 @@ function serve(lang, posts) {
 const words = {
   en: { field: "Compact at", save: "Save", bad: "Compact at: lots is not a number of tokens like 272k", at: (n) => `Compact at ${n}`, full: "Full window" },
   zh: { field: "压缩阈值", save: "保存", bad: "压缩阈值：lots 不是 272k 这样的 token 数", at: (n) => `${n} 时压缩`, full: "完整窗口" },
+  "zh-TW": { field: "壓縮閾值", save: "儲存", bad: "壓縮閾值：lots 不是 272k 這樣的 token 數", at: (n) => `${n} 時壓縮`, full: "完整視窗" },
+  ja: { field: "圧縮しきい値", save: "保存", bad: "圧縮しきい値：lots は 272k のようなトークン数ではありません", at: (n) => `${n} で圧縮`, full: "ウィンドウ全体" },
+  de: { field: "Komprimieren ab", save: "Speichern", bad: "Komprimieren ab: lots ist keine Token-Zahl wie 272k", at: (n) => `Bei ${n} komprimieren`, full: "Volles Fenster" },
 };
 
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
-  for (const lang of ["en", "zh"]) {
+  for (const lang of Object.keys(words)) {
     const w = words[lang];
-    const open = async (t, view, height = 720) => {
+    const open = async (t, view, height = 720, width = 900) => {
       const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || "chromium" }));
       t.after(() => browser.close());
-      const page = await (await browser.newContext({ viewport: { width: 900, height }, reducedMotion: "reduce" })).newPage();
+      const page = await (await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" })).newPage();
       page.setDefaultTimeout(5000);
       const errors = [], posts = [];
       page.on("pageerror", (e) => errors.push(e.message));
@@ -109,8 +112,9 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       await num.waitFor();
       assert.equal(await num.getAttribute("aria-label"), w.field);
       assert.equal(await row.locator("select").count(), 0, "no native select");
-      assert(await row.getByText(w.at("272K"), { exact: true }).isVisible(), "272K by default");
+      assert(await row.getByText(w.at("512K"), { exact: true }).isVisible(), "512K by default");
       assert.equal(await num.inputValue(), "");
+      assert.equal(await num.getAttribute("placeholder"), "512k");
       const view = () => page.locator("#view-settings").evaluate((v) => v.scrollTop);
       const before = await view();
       await num.fill("lots");
@@ -129,8 +133,32 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       await row.getByText(w.at("500K"), { exact: true }).click();
       await page.waitForFunction(() => document.querySelector("#fullContextSegs input.compact-num")?.hidden === false);
       assert.deepEqual(posts.at(-1).body, { on: false });
+      // 272K is now an explicit choice, not normalized to the default.
+      await row.locator("input.compact-num").fill("272k");
+      await row.locator("input.compact-num").press("Enter");
+      await row.getByText(w.at("272K"), { exact: true }).waitFor();
+      assert.equal(await row.locator("input.compact-num").inputValue(), "272k");
+      assert.deepEqual(posts.at(-1).body, { on: false, at: 272000 });
+      await row.locator("input.compact-num").fill("");
+      await row.locator("input.compact-num").press("Enter");
+      await row.getByText(w.at("512K"), { exact: true }).waitFor();
+      assert.equal(await row.locator("input.compact-num").inputValue(), "");
+      assert.deepEqual(posts.at(-1).body, { on: false, at: 0 });
       assert.equal(await view(), before, "the row scrolled the page");
       assert(!posts.some((p) => p.path === "/api/settings"), "set on its own, not with the other preferences");
+      assert.deepEqual(errors, []);
+    });
+
+    test(`${engine} ${lang}: the default window fits a narrow settings row`, async (t) => {
+      const { page, errors } = await open(t, "settings", 720, 560);
+      const row = page.locator("#fullContextSegs");
+      await row.getByText(w.at("512K"), { exact: true }).waitFor();
+      assert.equal(await row.locator("input.compact-num").getAttribute("placeholder"), "512k");
+      const fits = await row.evaluate((e) => [...e.querySelectorAll(".opt, input")].every((child) => {
+        const box = child.getBoundingClientRect();
+        return box.left >= 0 && box.right <= innerWidth;
+      }));
+      assert(fits, "the controls overflow the window");
       assert.deepEqual(errors, []);
     });
   }

@@ -517,11 +517,9 @@ func codexListTag(kind string) string {
 		ms = append(ms, catalog.Model{ID: "^" + id})
 	}
 	ms = append(ms, codexWindowsTag()...)
-	// and where a model with no threshold of its own is compacted, when
-	// that isn't the working window
-	if n := settings.Load().Compact(); n != settings.WorkingWindow {
-		ms = append(ms, catalog.Model{ID: "~compact", Context: n})
-	}
+	// Include the default too: an upgrade that changes it must invalidate
+	// Codex's cached list even when the user's settings haven't changed.
+	ms = append(ms, catalog.Model{ID: "~compact", Context: settings.Load().Compact()})
 	// and the model Codex's auto-review runs on (#938)
 	if v := settings.Load().CodexAutoReview; v != "" {
 		ms = append(ms, catalog.Model{ID: "~autoreview:" + v})

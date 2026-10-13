@@ -34,6 +34,33 @@ something else shows up as drift.
 4. **Drift.** As the Agents page is drawn, `Drift` compares the config with `applied.json`. It runs `Check` first, then each field. When the config is right and points at an address off loopback (a WSL twin under NAT, or this machine's Codex at an address the user kept, #816), it tries that address ([`reach.go`](../../internal/agent/reach.go)): in the background, at most every 20 s, never waited for. When nothing answers there while the gateway answers on loopback, the drift is `unreachable` (#1013), with what has to listen there: Share on local network, the user's portproxy, Windows' firewall. Then it checks whether the agent's latest use (`LastUsed`, `Reached`) reached the gateway.
 5. **Disconnect.** `Disconnect` puts back what the stash kept and forgets the record. It also marks the agent disconnected (`<id>.disconnected` in the stash, `Disconnected`) until the user connects it again (`connect`, or an `Apply` that leaves it wired): nothing magpie does by itself puts magpie back in meanwhile, neither a start's `Sync` nor Codex's account failover nor #701's magpie API wiring (paynezhuang on Discord: Codex had `openai_base_url` back after every update).
 
+## Conversation windows
+
+With no compaction threshold set, magpie tells Codex's generated model
+entries a working window of at most 512,000 tokens, without enlarging a
+smaller model's window. A capped entry keeps its full window in
+`max_context_window`.
+Claude Code uses the same default for non-Claude models and mixed routing
+groups; Claude models and all-Claude groups keep their own window.
+This is magpie's policy, not a claim about every Codex model's default:
+native ChatGPT entries keep their resolved provider window.
+
+A model's or provider's threshold comes before Settings' `compactAt`;
+`fullContext` removes the global cap. User-typed model windows and
+agent-owned compaction settings keep their existing precedence. See
+[`settings.Compact`](../../internal/settings/settings.go),
+[`provider.CompactFor`](../../internal/provider/compact.go),
+[`codexcat.Entries`](../../internal/codexcat/codexcat.go) and
+[`claudeCompactEnv`](../../internal/agent/claude.go).
+[`CodexListTag`](../../internal/provider/codex_models.go) includes the
+effective global threshold, including the default, so a changed default
+invalidates Codex's cached list.
+
+An absent or zero `compactAt` follows the default. An explicit positive
+value remains unchanged. Earlier versions normalized a typed 272K to zero,
+so those saved settings follow the new default too; selecting 272K now
+stores it as an explicit threshold.
+
 ## Constraints and failure behavior
 
 - magpie only removes what it wrote. Anything else in an agent's config stays as it was.

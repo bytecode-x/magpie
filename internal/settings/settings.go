@@ -384,8 +384,8 @@ type Settings struct {
 	// so they compact a long conversation there instead of sending ever
 	// more of it on every turn (X: Chen, a 1M DeepSeek model through
 	// Codex and Claude Code took 70–90s to its first token at 550K):
-	// what OpenAI does with its own models, 272K though they can take
-	// more, and Anthropic with its, 200K unless a [1m] one is picked.
+	// magpie's working window, not the model's maximum. Claude Code's
+	// Claude models keep their own window unless a threshold is set.
 	FullContext bool `json:"fullContext,omitempty"`
 	// DesktopLongest has Claude Desktop list a model of 1M tokens or more
 	// once, as its 1M entry (its id with Claude Code's "[1m]"), instead of
@@ -795,9 +795,8 @@ func CarryPerModel(in, cur *Settings) {
 }
 
 // WorkingWindow is the context window Codex and Claude Code are told for a
-// model with a larger one, unless FullContext: Codex's own for OpenAI's
-// models that can take more.
-const WorkingWindow = 272000
+// model with a larger one, unless FullContext or a threshold is set.
+const WorkingWindow = 512000
 
 // Working is the context window an agent is told for a model with one of
 // n tokens (see FullContext).

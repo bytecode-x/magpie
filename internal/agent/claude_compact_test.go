@@ -40,8 +40,16 @@ func TestClaudeCompactWindow(t *testing.T) {
 	}
 
 	must(a.Field("model").Set("v/big[1m]"))
-	if compact() != "272000" {
+	if compact() != "512000" {
 		t.Fatalf("on magpie: %q", compact())
+	}
+	// An older magpie wrote and stashed 272K. Sync updates its own value,
+	// rather than mistaking it for a user-owned threshold.
+	must(edit.SetJSON(path, edit.KV{Path: "env." + claudeCompactEnv, Value: "272000"}))
+	stash(map[string]string{"claude.compact_window": "272000"})
+	must(a.Sync())
+	if compact() != "512000" {
+		t.Fatalf("synced old working window: %q", compact())
 	}
 	must(settings.Save(settings.Settings{FullContext: true}))
 	must(a.Sync())
@@ -50,7 +58,7 @@ func TestClaudeCompactWindow(t *testing.T) {
 	}
 	must(settings.Save(settings.Settings{}))
 	must(a.Sync())
-	if compact() != "272000" {
+	if compact() != "512000" {
 		t.Fatalf("back to the working window: %q", compact())
 	}
 	// a Claude model runs to its whole window, as Anthropic runs a [1m]
@@ -65,7 +73,7 @@ func TestClaudeCompactWindow(t *testing.T) {
 		t.Fatalf("a Claude model, synced: %q", compact())
 	}
 	must(a.Field("model").Set("v/big[1m]"))
-	if compact() != "272000" {
+	if compact() != "512000" {
 		t.Fatalf("after a Claude model: %q", compact())
 	}
 	must(a.Field("model").Set(""))
@@ -181,11 +189,11 @@ func TestClaudeCompactYieldsToOwnSetting(t *testing.T) {
 	}
 	must(edit.DelJSON(path, "autoCompactWindow"))
 	must(a.Sync())
-	expect("none set", "272000")
+	expect("none set", "512000")
 	// one for this model in modelSettings, not another's
 	must(edit.SetJSON(path, edit.KV{Path: "modelSettings", Value: map[string]any{"v/flash": map[string]any{"autoCompactWindow": 800000}}}))
 	must(a.Sync())
-	expect("another model's", "272000")
+	expect("another model's", "512000")
 	must(a.Field("model").Set("v/flash[1m]"))
 	expect("this model's", "")
 	// a size typed in magpie, or the model's own there, comes first
@@ -199,7 +207,7 @@ func TestClaudeCompactYieldsToOwnSetting(t *testing.T) {
 }
 
 // A routing group made only of Claude models runs as a Claude model does,
-// to its own window: Claude Code isn't handed magpie's default 272000 for
+// to its own window: Claude Code isn't handed magpie's default 512000 for
 // it (#1741, yanjieee: a group of Claude [1m] models was, its id's last
 // part not starting with "claude"), a group in it of Claude models too.
 // A group with another vendor's model in it keeps the default, a
@@ -239,7 +247,7 @@ func TestClaudeGroupCompactWindow(t *testing.T) {
 	}
 
 	must(a.Field("model").Set("group/mix[1m]"))
-	expect("a group with another vendor's model", "272000")
+	expect("a group with another vendor's model", "512000")
 	must(a.Field("model").Set("group/auto-opus[1m]"))
 	expect("a group of Claude models", "")
 	must(a.Sync())
@@ -247,7 +255,7 @@ func TestClaudeGroupCompactWindow(t *testing.T) {
 	must(a.Field("model").Set("group/outer"))
 	expect("a group of a group of Claude models", "")
 	must(a.Field("model").Set("group/mix"))
-	expect("back on the mixed group", "272000")
+	expect("back on the mixed group", "512000")
 
 	// a threshold set on a member's provider comes first, as it does for
 	// a Claude model

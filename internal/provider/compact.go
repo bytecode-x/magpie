@@ -10,7 +10,7 @@ import (
 // Where Codex and Claude Code compact a long conversation (#876): the
 // window they are told for a model whose own is longer. A model's own
 // (settings.ModelCompacts, "provider/model"), else its provider's
-// ("provider/*"), else the one for every model (settings.Compact: 272K, a
+// ("provider/*"), else the one for every model (settings.Compact: 512K, a
 // number the user gave, or none under Full window).
 
 // compactOf is the user's threshold for a provider's model: its own, else

@@ -21867,9 +21867,9 @@ function renderTrayUsage(s, keep) {
   // at a size the user types too, not 272K alone (#876); a provider's own
   // Compact at comes before either
   const setCompact = (body) => writingPrefs(api("settings/full-context", body)).then((ns) => { prefs = ns; renderSettings(); }).catch((e) => { status(t(e.message), "err"); renderSettings(); });
-  const at = contextsText({ "*": s.compactAt || 272000 });
+  const at = contextsText({ "*": s.compactAt || 512000 });
   const compactSegs = segs([["off", t("Compact at {n}", { n: at.toUpperCase() })], ["on", t("Full window")]], s.fullContext ? "on" : "off", (v) => setCompact({ on: v === "on" }));
-  const compactNum = input(s.compactAt ? at : "", "272k");
+  const compactNum = input(s.compactAt ? at : "", "512k");
   compactNum.className = "words compact-num";
   compactNum.hidden = !!s.fullContext;
   compactNum.title = t("Compact at");

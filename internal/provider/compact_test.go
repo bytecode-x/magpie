@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/yetone/magpie/internal/catalog"
+	"github.com/yetone/magpie/internal/codexcat"
 	"github.com/yetone/magpie/internal/settings"
 )
 
@@ -85,7 +86,7 @@ func TestModelCompactsSetFromTheEditor(t *testing.T) {
 }
 
 // The threshold for every model can be any size, not 272K alone (#876):
-// typing one turns Full window off, 272K or nothing is the default again.
+// typing one turns Full window off, 512K or nothing is the default again.
 func TestSetCompactAt(t *testing.T) {
 	limitsHome(t)
 	if err := settings.Save(settings.Settings{FullContext: true}); err != nil {
@@ -97,16 +98,45 @@ func TestSetCompactAt(t *testing.T) {
 	if s := settings.Load(); s.FullContext || s.CompactAt != 500000 || s.Compact() != 500000 || s.Working(1000000) != 500000 || s.Working(200000) != 200000 {
 		t.Errorf("at 500K: %+v", s)
 	}
-	if err := SetCompactAt(settings.WorkingWindow); err != nil {
+	if err := SetCompactAt(272000); err != nil {
 		t.Fatal(err)
 	}
-	if s := settings.Load(); s.CompactAt != 0 || s.Compact() != settings.WorkingWindow {
-		t.Errorf("at 272K: %+v", s)
+	if s := settings.Load(); s.CompactAt != 272000 || s.Compact() != 272000 {
+		t.Errorf("explicit 272K: %+v", s)
+	}
+	if err := SetCompactAt(512000); err != nil {
+		t.Fatal(err)
+	}
+	if s := settings.Load(); s.CompactAt != 0 || s.Compact() != 512000 {
+		t.Errorf("at 512K: %+v", s)
 	}
 	if err := SetCompactAt(-1); err == nil {
 		t.Error("a negative size was accepted")
 	}
 	if s := (settings.Settings{CompactAt: 500000, FullContext: true}); s.Compact() != 0 || s.Working(1000000) != 1000000 {
 		t.Errorf("full window: %d", s.Compact())
+	}
+}
+
+// The old tag omitted the default threshold, so changing that default
+// could leave Codex refreshing the age of a cached list with the old window.
+func TestCodexDefaultCompactChangesLegacyListTag(t *testing.T) {
+	limitsHome(t)
+	legacy := codexcat.PolicyTag(codexcat.Tag(CodexListed()))
+	got := CodexListTag()
+	if got == legacy {
+		t.Fatalf("default compaction window missing from the list tag: %q", got)
+	}
+	if err := SetCompactAt(272000); err != nil {
+		t.Fatal(err)
+	}
+	if CodexListTag() == got {
+		t.Error("explicit 272K kept the default list tag")
+	}
+	if err := SetCompactAt(512000); err != nil {
+		t.Fatal(err)
+	}
+	if reset := CodexListTag(); reset != got {
+		t.Errorf("reset tag %q; want %q", reset, got)
 	}
 }
